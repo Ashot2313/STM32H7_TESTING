@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -41,14 +42,35 @@
 
 /* Private variables ---------------------------------------------------------*/
 
-/* USER CODE BEGIN PV */
+QSPI_HandleTypeDef hqspi;
 
+TIM_HandleTypeDef htim7;
+
+UART_HandleTypeDef huart1;
+
+/* USER CODE BEGIN PV */
+QSPI_CommandTypeDef sCommand;
+uint32_t qspi_address = 0;
+uint16_t qspi_index;
+__IO uint8_t step = 0;
+__IO uint8_t CmdCplt, RxCplt, TxCplt, StatusMatch, TimeOut;
+/* Buffer used for transmission */
+uint8_t aTxBuffer[] = " ****QSPI communication based on IT****  ****QSPI communication based on IT****  ****QSPI communication based on IT****  ****QSPI communication based on IT****  ****QSPI communication based on IT****  ****QSPI communication based on IT**** ";
+
+/* Buffer used for reception */
+uint8_t aRxBuffer[BUFFERSIZE];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MPU_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_QUADSPI_Init(void);
+static void MX_TIM7_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
+void init_qspi_flash(void);
+
 
 /* USER CODE END PFP */
 
@@ -71,6 +93,14 @@ int main(void)
   /* MPU Configuration--------------------------------------------------------*/
   MPU_Config();
 
+  /* Enable the CPU Cache */
+
+  /* Enable I-Cache---------------------------------------------------------*/
+  SCB_EnableICache();
+
+  /* Enable D-Cache---------------------------------------------------------*/
+  SCB_EnableDCache();
+
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -88,8 +118,13 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_QUADSPI_Init();
+  MX_TIM7_Init();
+  MX_USART1_UART_Init();
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
-
+  init_qspi_flash();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -118,17 +153,25 @@ void SystemClock_Config(void)
 
   /** Configure the main internal regulator output voltage
   */
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_DIV1;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 5;
+  RCC_OscInitStruct.PLL.PLLN = 160;
+  RCC_OscInitStruct.PLL.PLLP = 2;
+  RCC_OscInitStruct.PLL.PLLQ = 2;
+  RCC_OscInitStruct.PLL.PLLR = 2;
+  RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_2;
+  RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
+  RCC_OscInitStruct.PLL.PLLFRACN = 0;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -139,21 +182,377 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2
                               |RCC_CLOCKTYPE_D3PCLK1|RCC_CLOCKTYPE_D1PCLK1;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV1;
-  RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV1;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV1;
-  RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV1;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV2;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
+  RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }
 }
 
+/**
+  * @brief QUADSPI Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_QUADSPI_Init(void)
+{
+
+  /* USER CODE BEGIN QUADSPI_Init 0 */
+
+  /* USER CODE END QUADSPI_Init 0 */
+
+  /* USER CODE BEGIN QUADSPI_Init 1 */
+
+  /* USER CODE END QUADSPI_Init 1 */
+  /* QUADSPI parameter configuration*/
+  hqspi.Instance = QUADSPI;
+  hqspi.Init.ClockPrescaler = 255;
+  hqspi.Init.FifoThreshold = 1;
+  hqspi.Init.SampleShifting = QSPI_SAMPLE_SHIFTING_NONE;
+  hqspi.Init.FlashSize = 1;
+  hqspi.Init.ChipSelectHighTime = QSPI_CS_HIGH_TIME_1_CYCLE;
+  hqspi.Init.ClockMode = QSPI_CLOCK_MODE_0;
+  hqspi.Init.FlashID = QSPI_FLASH_ID_1;
+  hqspi.Init.DualFlash = QSPI_DUALFLASH_DISABLE;
+  if (HAL_QSPI_Init(&hqspi) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN QUADSPI_Init 2 */
+
+  /* USER CODE END QUADSPI_Init 2 */
+
+}
+
+/**
+  * @brief TIM7 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM7_Init(void)
+{
+
+  /* USER CODE BEGIN TIM7_Init 0 */
+
+  /* USER CODE END TIM7_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM7_Init 1 */
+
+  /* USER CODE END TIM7_Init 1 */
+  htim7.Instance = TIM7;
+  htim7.Init.Prescaler = 199;
+  htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim7.Init.Period = 1000;
+  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM7_Init 2 */
+
+  /* USER CODE END TIM7_Init 2 */
+
+}
+
+/**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart1.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetTxFifoThreshold(&huart1, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetRxFifoThreshold(&huart1, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_DisableFifoMode(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
+}
+
+/**
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+
+  /* USER CODE END MX_GPIO_Init_1 */
+
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOE_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOH_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(BLUE_LED_GPIO_Port, BLUE_LED_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : BLUE_LED_Pin */
+  GPIO_InitStruct.Pin = BLUE_LED_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(BLUE_LED_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : EXT_BUTTON_Pin */
+  GPIO_InitStruct.Pin = EXT_BUTTON_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(EXT_BUTTON_GPIO_Port, &GPIO_InitStruct);
+
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+
+  /* USER CODE END MX_GPIO_Init_2 */
+}
+
 /* USER CODE BEGIN 4 */
+/**
+  * @brief  Command completed callbacks.
+  * @param  hqspi: QSPI handle
+  * @retval None
+  */
+void HAL_QSPI_CmdCpltCallback(QSPI_HandleTypeDef *hqspi)
+{
+  CmdCplt++;
+}
+
+/**
+  * @brief  Rx Transfer completed callbacks.
+  * @param  hqspi: QSPI handle
+  * @retval None
+  */
+void HAL_QSPI_RxCpltCallback(QSPI_HandleTypeDef *hqspi)
+{
+  RxCplt++;
+}
+
+/**
+  * @brief  Tx Transfer completed callbacks.
+  * @param  hqspi: QSPI handle
+  * @retval None
+  */
+void HAL_QSPI_TxCpltCallback(QSPI_HandleTypeDef *hqspi)
+{
+  TxCplt++;
+}
+
+/**
+  * @brief  Status Match callbacks
+  * @param  hqspi: QSPI handle
+  * @retval None
+  */
+void HAL_QSPI_StatusMatchCallback(QSPI_HandleTypeDef *hqspi)
+{
+  StatusMatch++;
+}
+
+
+
+
+void init_qspi_flash(void){
+	hqspi.Instance = QUADSPI;
+	  HAL_QSPI_DeInit(&hqspi);
+
+	  hqspi.Init.ClockPrescaler     = 16;
+	  hqspi.Init.FifoThreshold      = 4;
+	  hqspi.Init.SampleShifting     = QSPI_SAMPLE_SHIFTING_HALFCYCLE;
+	  hqspi.Init.FlashSize          = QSPI_FLASH_SIZE;
+	  hqspi.Init.ChipSelectHighTime = QSPI_CS_HIGH_TIME_1_CYCLE;
+	  hqspi.Init.ClockMode          = QSPI_CLOCK_MODE_0;
+	  hqspi.Init.FlashID            = QSPI_FLASH_ID_1;
+	  hqspi.Init.DualFlash          = QSPI_DUALFLASH_DISABLE;
+
+	  if (HAL_QSPI_Init(&hqspi) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+
+	  sCommand.InstructionMode   = QSPI_INSTRUCTION_1_LINE;
+	  sCommand.AddressSize       = QSPI_ADDRESS_24_BITS;
+	  sCommand.AlternateByteMode = QSPI_ALTERNATE_BYTES_NONE;
+	  sCommand.DdrMode           = QSPI_DDR_MODE_DISABLE;
+	  sCommand.DdrHoldHalfCycle  = QSPI_DDR_HHC_ANALOG_DELAY;
+	  sCommand.SIOOMode          = QSPI_SIOO_INST_EVERY_CMD;
+
+}
+
+
+int32_t erase_sector_qspi(uint32_t start_addr){
+    /* Enable write operations ------------------------------------------- */
+    QSPI_WriteEnable(&hqspi);
+
+    /* Erasing Sequence -------------------------------------------------- */
+    sCommand.Instruction = SECTOR_ERASE_CMD;
+    sCommand.AddressMode = QSPI_ADDRESS_1_LINE;
+    sCommand.Address     = start_addr;
+    sCommand.DataMode    = QSPI_DATA_NONE;
+    sCommand.DummyCycles = 0;
+
+    if (HAL_QSPI_Command_IT(&hqspi, &sCommand) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+}
+
+
+
+int32_t cmd_end_rdy_qspi(uint32_t timeout)
+{while(timeout>0)
+{
+	if(CmdCplt != 0)
+	        {
+	          CmdCplt = 0;
+	          StatusMatch = 0;
+
+	          /* Configure automatic polling mode to wait for end of erase ------- */
+	          QSPI_AutoPollingMemReady(&hqspi);
+
+break;
+	        }
+	HAL_Delay(1);
+	timeout--;
+
+}
+if(timeout==0)
+{return -1;}
+else {return 0;}
+}
+
+int32_t write_buf_qspi(uint8_t *buf,uint32_t buf_size, uint32_t start_addr, uint32_t timeout){
+
+
+      StatusMatch = 0;
+      TxCplt = 0;
+
+      /* Enable write operations ----------------------------------------- */
+      QSPI_WriteEnable(&hqspi);
+
+      /* Writing Sequence ------------------------------------------------ */
+      sCommand.Instruction = QUAD_IN_FAST_PROG_CMD;
+      sCommand.AddressMode = QSPI_ADDRESS_1_LINE;
+      sCommand.DataMode    = QSPI_DATA_4_LINES;
+      sCommand.NbData      = buf_size;
+      sCommand.Address		= start_addr;
+      if (HAL_QSPI_Command(&hqspi, &sCommand, HAL_QPSI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+      {
+        Error_Handler();
+      }
+
+      if (HAL_QSPI_Transmit_IT(&hqspi, buf) != HAL_OK)
+      {
+        Error_Handler();
+      }
+
+
+
+	return 0;
+
+}
+
+int32_t programm_end_rdy_qspi(uint32_t timeout)
+{while(timeout>0)
+{
+	if(TxCplt != 0)
+	        {
+		TxCplt = 0;
+	          StatusMatch = 0;
+
+	          /* Configure automatic polling mode to wait for end of erase ------- */
+	          QSPI_AutoPollingMemReady(&hqspi);
+
+break;
+	        }
+	HAL_Delay(1);
+	timeout--;
+
+}
+if(timeout==0)
+{return -1;}
+else {return 0;}
+}
+
+int32_t read_buf_qspi(uint8_t *buf,uint32_t buf_size, uint32_t start_addr,uint32_t timeout){
+
+
+
+      StatusMatch = 0;
+      RxCplt = 0;
+
+      /* Configure Volatile Configuration register (with new dummy cycles) */
+      QSPI_DummyCyclesCfg(&hqspi);
+
+      /* Reading Sequence ------------------------------------------------ */
+      sCommand.Instruction = QUAD_OUT_FAST_READ_CMD;
+      sCommand.DummyCycles = DUMMY_CLOCK_CYCLES_READ_QUAD;
+      sCommand.NbData      = buf_size;
+      sCommand.Address		= start_addr;
+      if (HAL_QSPI_Command(&hqspi, &sCommand, HAL_QPSI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+      {
+        Error_Handler();
+      }
+
+      if (HAL_QSPI_Receive_IT(&hqspi, buf) != HAL_OK)
+      {
+        Error_Handler();
+      }
+
+ return 0;
+
+}
 
 /* USER CODE END 4 */
 
