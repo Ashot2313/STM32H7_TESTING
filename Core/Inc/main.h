@@ -65,7 +65,7 @@ void Error_Handler(void);
 /* USER CODE BEGIN Private defines */
 /* MT25TL01GHBA8ESF Micron memory */
 /* Size of the flash */
-#define QSPI_FLASH_SIZE                      25
+#define QSPI_FLASH_SIZE                      22
 #define QSPI_PAGE_SIZE                       256
 
 /* Reset Operations */

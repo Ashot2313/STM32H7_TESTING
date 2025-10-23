@@ -1,8 +1,8 @@
 ../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_scsi.c:121:8:SCSI_ProcessCmd	32	static
 ../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_scsi.c:211:15:SCSI_TestUnitReady	32	static
 ../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_scsi.c:256:15:SCSI_Inquiry	40	static
-../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_scsi.c:317:15:SCSI_ReadCapacity10	32	static
-../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_scsi.c:361:15:SCSI_ReadCapacity16	40	static
+../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_scsi.c:317:15:SCSI_ReadCapacity10	40	static
+../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_scsi.c:361:15:SCSI_ReadCapacity16	48	static
 ../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_scsi.c:418:15:SCSI_ReadFormatCapacity	40	static
 ../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_scsi.c:469:15:SCSI_ModeSense6	32	static
 ../Middlewares/ST/STM32_USB_Device_Library/Class/MSC/Src/usbd_msc_scsi.c:504:15:SCSI_ModeSense10	32	static
