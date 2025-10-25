@@ -8,7 +8,7 @@
 ../Core/Src/quadspi.c:245:9:QSPI_Configuration	72	static
 ../Core/Src/quadspi.c:336:9:CSP_QSPI_EraseBlock	80	static
 ../Core/Src/quadspi.c:366:9:CSP_QSPI_EraseSector	72	static
-../Core/Src/quadspi.c:408:9:CSP_QSPI_WriteMemory	96	static
-../Core/Src/quadspi.c:522:9:CSP_QSPI_EnableMemoryMappedMode	72	static
-../Core/Src/quadspi.c:554:9:QSPI_ResetChip	72	static,ignoring_inline_asm
-../Core/Src/quadspi.c:598:9:CSP_QSPI_Read	80	static
+../Core/Src/quadspi.c:406:9:CSP_QSPI_WriteMemory	96	static
+../Core/Src/quadspi.c:520:9:CSP_QSPI_EnableMemoryMappedMode	72	static
+../Core/Src/quadspi.c:552:9:QSPI_ResetChip	72	static,ignoring_inline_asm
+../Core/Src/quadspi.c:596:9:CSP_QSPI_Read	80	static

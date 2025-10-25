@@ -23,6 +23,10 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "quadspi.h"
+extern more_sizes check_;
+
+extern volatile uint8_t arr[4096*32];
+flags_qspi _flags;
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -121,19 +125,35 @@ int main(void)
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
 
- int32_t err=0;
-err=CSP_QUADSPI_Init();
+/*
 
 
 if (CSP_QSPI_WriteMemory(aTxBuffer, 0, sizeof(aTxBuffer)) != HAL_OK) Error_Handler();
 
-if (CSP_QSPI_Read(aRxBuffer, 0, 100) != HAL_OK) Error_Handler();
+if (CSP_QSPI_Read(aRxBuffer, 0, sizeof(aTxBuffer)) != HAL_OK) Error_Handler();*/
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+	 /* if(_flags.write_busy==1)
+	  {uint32_t tmp=check_._sizes[0].blk_len;
+		  do{
+		  CSP_QSPI_EraseSector(check_._sizes[0].blk_addr*4096+check_._sizes[0].blk_len*4096);
+		  check_._sizes[0].blk_len--;
+	  }while(check_._sizes[0].blk_len>0);
+		  HAL_Delay(1);
+		   CSP_QSPI_WriteMemory(arr,check_._sizes[0].blk_addr*4096,4096*tmp);
+		   _flags.write_busy=0;
+
+	  }
+	  if(_flags.read_busy==1){
+
+		  CSP_QSPI_Read(arr, check_._sizes[1].blk_addr*4096, 4096*check_._sizes[1].blk_len);
+		  _flags.read_busy=2;
+	  }*/
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -216,8 +236,8 @@ static void MX_QUADSPI_Init(void)
   /* USER CODE END QUADSPI_Init 1 */
   /* QUADSPI parameter configuration*/
   hqspi.Instance = QUADSPI;
-  hqspi.Init.ClockPrescaler = 255;
-  hqspi.Init.FifoThreshold = 1;
+  hqspi.Init.ClockPrescaler = 2;
+  hqspi.Init.FifoThreshold = 4;
   hqspi.Init.SampleShifting = QSPI_SAMPLE_SHIFTING_HALFCYCLE;
   hqspi.Init.FlashSize = 22;
   hqspi.Init.ChipSelectHighTime = QSPI_CS_HIGH_TIME_1_CYCLE;
@@ -441,8 +461,8 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
- // __disable_irq();
-//  while (1)
+  __disable_irq();
+  while (1)
   {
   }
   /* USER CODE END Error_Handler_Debug */

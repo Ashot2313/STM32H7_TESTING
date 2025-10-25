@@ -22,7 +22,7 @@
 #include "usbd_storage_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-
+#include "quadspi.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -32,6 +32,10 @@
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
+more_sizes check_;
+ uint32_t counter=0;
+volatile uint8_t arr[4096*32];
+extern flags_qspi _flags;
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -63,8 +67,8 @@
   */
 
 #define STORAGE_LUN_NBR                  1
-#define STORAGE_BLK_NBR                  0x10000
-#define STORAGE_BLK_SIZ                  0x200
+#define STORAGE_BLK_NBR                  2048
+#define STORAGE_BLK_SIZ                  4096
 
 /* USER CODE BEGIN PRIVATE_DEFINES */
 
@@ -178,7 +182,7 @@ int8_t STORAGE_Init_FS(uint8_t lun)
 {
   /* USER CODE BEGIN 2 */
  UNUSED(lun);
-
+// CSP_QUADSPI_Init();
   return (USBD_OK);
   /* USER CODE END 2 */
 }
@@ -241,11 +245,31 @@ int8_t STORAGE_Read_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t bl
 {
   /* USER CODE BEGIN 6 */
   UNUSED(lun);
-  UNUSED(buf);
-  UNUSED(blk_addr);
-  UNUSED(blk_len);
+ // UNUSED(buf);
+ // UNUSED(blk_addr);
+ // UNUSED(blk_len);
+  //return (USBD_OK);
+  //counter++;
+  if(_flags.read_busy==0 && _flags.write_busy==0){
 
-  return (USBD_OK);
+  check_._sizes[1].blk_len=blk_len;
+  check_._sizes[1].blk_addr=blk_addr;
+  check_._sizes[1].r_w=0;  //
+  CSP_QSPI_Read(buf, blk_addr*STORAGE_BLK_SIZ, STORAGE_BLK_SIZ);
+
+	  return (USBD_OK);
+  }
+  if(_flags.read_busy==2)
+  {
+
+	//  memcpy(buf, arr,STORAGE_BLK_SIZ*blk_len);
+	  _flags.read_busy=0;
+	  return (USBD_OK);
+  }
+  else {return (USBD_FAIL);}
+ // CSP_QSPI_Read(buf, blk_addr*blk_len, STORAGE_BLK_SIZ);
+ // memcpy(buf, &arr[blk_addr*STORAGE_BLK_SIZ],STORAGE_BLK_SIZ*blk_len);
+
   /* USER CODE END 6 */
 }
 
@@ -261,11 +285,27 @@ int8_t STORAGE_Write_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t b
 {
   /* USER CODE BEGIN 7 */
   UNUSED(lun);
-  UNUSED(buf);
-  UNUSED(blk_addr);
-  UNUSED(blk_len);
+ // UNUSED(buf);
+ // UNUSED(blk_addr);
+ //UNUSED(blk_len);
 
-  return (USBD_OK);
+  if(_flags.write_busy==0){
+  check_._sizes[0].blk_len=blk_len;
+  check_._sizes[0].blk_addr=blk_addr;
+  check_._sizes[0].r_w=1;
+ // _flags.write_busy=1;
+ counter++;
+  memcpy(arr,buf,STORAGE_BLK_SIZ*blk_len);
+/*for(uint32_t i=0;i< STORAGE_BLK_SIZ*blk_len;i++){
+	arr[i]=buf[i];
+
+
+}*/
+  CSP_QSPI_EraseSector(STORAGE_BLK_SIZ*blk_addr);
+ CSP_QSPI_WriteMemory(arr,blk_addr*STORAGE_BLK_SIZ,blk_len*STORAGE_BLK_SIZ);
+
+  return (USBD_OK);}
+  else {return (USBD_FAIL);}
   /* USER CODE END 7 */
 }
 

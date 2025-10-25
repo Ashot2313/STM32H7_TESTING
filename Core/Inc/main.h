@@ -63,7 +63,22 @@ void Error_Handler(void);
 #define EXT_BUTTON_GPIO_Port GPIOC
 
 /* USER CODE BEGIN Private defines */
+typedef struct {
+volatile uint32_t read_busy;
+volatile uint32_t write_busy;
 
+}flags_qspi;
+
+typedef struct {
+	uint32_t blk_len;
+	uint32_t blk_addr;
+	uint32_t r_w;
+
+}sizes;
+typedef struct {
+	sizes _sizes[1024];
+
+}more_sizes;
 
 /* USER CODE END Private defines */
 

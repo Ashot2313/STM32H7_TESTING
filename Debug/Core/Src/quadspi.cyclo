@@ -7,8 +7,8 @@
 ../Core/Src/quadspi.c:204:16:QSPI_WriteEnable	3
 ../Core/Src/quadspi.c:245:9:QSPI_Configuration	10
 ../Core/Src/quadspi.c:336:9:CSP_QSPI_EraseBlock	3
-../Core/Src/quadspi.c:366:9:CSP_QSPI_EraseSector	5
-../Core/Src/quadspi.c:408:9:CSP_QSPI_WriteMemory	10
-../Core/Src/quadspi.c:522:9:CSP_QSPI_EnableMemoryMappedMode	2
-../Core/Src/quadspi.c:554:9:QSPI_ResetChip	4
-../Core/Src/quadspi.c:598:9:CSP_QSPI_Read	3
+../Core/Src/quadspi.c:366:9:CSP_QSPI_EraseSector	4
+../Core/Src/quadspi.c:406:9:CSP_QSPI_WriteMemory	10
+../Core/Src/quadspi.c:520:9:CSP_QSPI_EnableMemoryMappedMode	2
+../Core/Src/quadspi.c:552:9:QSPI_ResetChip	4
+../Core/Src/quadspi.c:596:9:CSP_QSPI_Read	3

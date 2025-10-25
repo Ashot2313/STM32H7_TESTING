@@ -363,13 +363,11 @@ uint8_t CSP_QSPI_EraseBlock(uint32_t flash_address) {
 	return HAL_OK;
 }
 
-uint8_t CSP_QSPI_EraseSector(uint32_t EraseStartAddress,
-		uint32_t EraseEndAddress) {
+uint8_t CSP_QSPI_EraseSector(uint32_t EraseStartAddress) {
 
 	QSPI_CommandTypeDef sCommand;
 
-	EraseStartAddress = EraseStartAddress
-			- EraseStartAddress % MEMORY_SECTOR_SIZE;
+	EraseStartAddress = EraseStartAddress- (EraseStartAddress % MEMORY_SECTOR_SIZE);
 
 	/* Erasing Sequence -------------------------------------------------- */
 	sCommand.InstructionMode = QSPI_INSTRUCTION_1_LINE;
@@ -384,7 +382,7 @@ uint8_t CSP_QSPI_EraseSector(uint32_t EraseStartAddress,
 	sCommand.DataMode = QSPI_DATA_NONE;
 	sCommand.DummyCycles = 0;
 
-	while (EraseEndAddress >= EraseStartAddress) {
+
 		sCommand.Address = (EraseStartAddress & 0x0FFFFFFF);
 
 		if (QSPI_WriteEnable() != HAL_OK) {
@@ -395,12 +393,12 @@ uint8_t CSP_QSPI_EraseSector(uint32_t EraseStartAddress,
 				!= HAL_OK) {
 			return HAL_ERROR;
 		}
-		EraseStartAddress += MEMORY_SECTOR_SIZE;
+
 
 		if (QSPI_AutoPollingMemReady() != HAL_OK) {
 			return HAL_ERROR;
 		}
-	}
+
 
 	return HAL_OK;
 }
