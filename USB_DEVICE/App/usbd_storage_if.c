@@ -255,17 +255,12 @@ int8_t STORAGE_Read_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t bl
   check_._sizes[1].blk_len=blk_len;
   check_._sizes[1].blk_addr=blk_addr;
   check_._sizes[1].r_w=0;  //
-  CSP_QSPI_Read(buf, blk_addr*STORAGE_BLK_SIZ, STORAGE_BLK_SIZ);
 
+  CSP_QSPI_Read(arr, blk_addr*STORAGE_BLK_SIZ, STORAGE_BLK_SIZ);
+  memcpy(buf, arr,STORAGE_BLK_SIZ*blk_len);
 	  return (USBD_OK);
   }
-  if(_flags.read_busy==2)
-  {
 
-	//  memcpy(buf, arr,STORAGE_BLK_SIZ*blk_len);
-	  _flags.read_busy=0;
-	  return (USBD_OK);
-  }
   else {return (USBD_FAIL);}
  // CSP_QSPI_Read(buf, blk_addr*blk_len, STORAGE_BLK_SIZ);
  // memcpy(buf, &arr[blk_addr*STORAGE_BLK_SIZ],STORAGE_BLK_SIZ*blk_len);
@@ -290,22 +285,23 @@ int8_t STORAGE_Write_FS(uint8_t lun, uint8_t *buf, uint32_t blk_addr, uint16_t b
  //UNUSED(blk_len);
 
   if(_flags.write_busy==0){
-  check_._sizes[0].blk_len=blk_len;
+ /* check_._sizes[0].blk_len=blk_len;
   check_._sizes[0].blk_addr=blk_addr;
   check_._sizes[0].r_w=1;
- // _flags.write_busy=1;
+  _flags.write_busy=1;
  counter++;
-  memcpy(arr,buf,STORAGE_BLK_SIZ*blk_len);
-/*for(uint32_t i=0;i< STORAGE_BLK_SIZ*blk_len;i++){
+  //
+for(uint32_t i=0;i< STORAGE_BLK_SIZ*blk_len;i++){
 	arr[i]=buf[i];
 
 
 }*/
+memcpy(arr,buf,STORAGE_BLK_SIZ*blk_len);
   CSP_QSPI_EraseSector(STORAGE_BLK_SIZ*blk_addr);
  CSP_QSPI_WriteMemory(arr,blk_addr*STORAGE_BLK_SIZ,blk_len*STORAGE_BLK_SIZ);
 
   return (USBD_OK);}
-  else {return (USBD_FAIL);}
+  else {return (USBD_BUSY);}
   /* USER CODE END 7 */
 }
 

@@ -138,7 +138,7 @@ if (CSP_QSPI_Read(aRxBuffer, 0, sizeof(aTxBuffer)) != HAL_OK) Error_Handler();*/
   while (1)
   {
 
-	 /* if(_flags.write_busy==1)
+	  if(_flags.write_busy==1)
 	  {uint32_t tmp=check_._sizes[0].blk_len;
 		  do{
 		  CSP_QSPI_EraseSector(check_._sizes[0].blk_addr*4096+check_._sizes[0].blk_len*4096);
@@ -153,7 +153,7 @@ if (CSP_QSPI_Read(aRxBuffer, 0, sizeof(aTxBuffer)) != HAL_OK) Error_Handler();*/
 
 		  CSP_QSPI_Read(arr, check_._sizes[1].blk_addr*4096, 4096*check_._sizes[1].blk_len);
 		  _flags.read_busy=2;
-	  }*/
+	  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
